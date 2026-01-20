@@ -1,7 +1,3 @@
-const TITLE = "";
-const DRIVE_FOLDER_ID = "";
-const AUTHOR = "";
-
 const COL_QUEST = 'Quest';
 const COL_ID = 'ID';
 const COL_TRIGGER = 'Trigger';
