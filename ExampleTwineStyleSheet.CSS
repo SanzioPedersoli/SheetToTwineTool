@@ -1,0 +1,48 @@
+body {
+    font-family: "Georgia", "Garamond", serif;
+    color: #f0f0f0;
+    background-color: #111;
+    line-height: 1.6;
+    font-weight: normal;
+}
+
+/* Tone indication of sentences, in-dialogue action descriptions */
+.tone {
+    display: block;
+    font-style: italic;
+    opacity: 0.75;
+    color: #d0d0d0;
+}
+
+/* Narrations of gameplay and cinematic sections */
+.narration {
+    font-style: italic;
+    color: #ffe28a;
+    display: block;
+    margin: 0.6em 0;
+    padding-left: 0.5em;
+    border-left: 3px solid #ffe28a30;
+}
+
+/* Character names in dialogues */
+.character {
+    font-weight: bold;
+    color: #b5b5b5;
+    display: block;
+    margin-top: 0.4em;
+    letter-spacing: 0.5px;
+}
+
+/* Documents and Handouts*/
+.document {
+    background-color: #f5ecd4;
+    padding: 18px 15px;
+    border: 2px solid #b29a72;
+    border-radius: 6px;
+    margin: 20px auto;
+    max-width: 650px;
+    font-family: "Georgia", serif;
+    color: #3a2e1c;
+    line-height: 1;
+    box-shadow: 0 0 6px rgba(0,0,0,0.25);
+}
