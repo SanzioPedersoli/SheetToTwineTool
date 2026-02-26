@@ -7,6 +7,8 @@ const COL_JUMPTO = 'JumpTo';
 const COL_NOTES = 'Artist Notes';
 const COL_MACROS = 'Designer Notes';
 
+const DOCUMENT_CHARACTER = 'DOCUMENT';
+
 function exportDialoguesToTwee() {
     const values = getSheetValues();
     validateData(values);
@@ -154,8 +156,8 @@ function buildPassageBody_(row, ctx) {
     let body = '';
 
     if (character) {
-        if (character == 'DOCUMENT') {
-            body += '<div class="document">' + dialog || '' + '</div>';
+        if (character == DOCUMENT_CHARACTER) {
+            body += '<div class="document">' + (dialog ?? '') + '</div>';
         } else {
             body += '<span class="character">' + character + ':</span> ';
             if (notes) {
@@ -286,7 +288,8 @@ function pushChoiceLinks_(lines, choices) {
 }
 
 function readCell_(row, index, fallback) {
-    return index != null ? row[index] : fallback;
+    if (index == null) return fallback;
+    return row[index] ?? fallback;
 }
 
 function isBlank_(v) {
