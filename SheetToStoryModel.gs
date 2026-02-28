@@ -8,7 +8,7 @@ function exportDialoguesToGenericNarrativeModel() {
 
   const output = buildStoryModel(rows, colMap);
 
-  const path = saveTweeToDrive(JSON.stringify(output, null, "\t"), TITLE + '.json');
+  const path = saveTweeToDrive(JSON.stringify(output, null, "  "), TITLE + '.json');
   return path;
 }
 
@@ -30,9 +30,10 @@ function buildStoryModel(rows, colMap) {
 
     sortedRows.forEach((row, i) => {
       const id = readCell_(row, ctx.idIndex);
+      const nextRow = sortedRows[i+1];
       if (isBlank_(id)) return;
 
-      const passage = buildPassageModel_(row, ctx, sortedRows, i);
+      const passage = buildPassageModel_(row, nextRow, ctx, sortedRows, i);
       storyModel.quests[quest].passages[id] = passage;
     });
   });
@@ -53,7 +54,7 @@ function buildColumnContext_(colMap) {
   };
 }
 
-function buildPassageModel_(row, ctx, data, idx) {
+function buildPassageModel_(row, nextRow, ctx, data, idx) {
   const character = readCell_(row, ctx.characterIndex);
   const dialog = readCell_(row, ctx.dialogIndex);
   const notes = readCell_(row, ctx.notesIndex);
@@ -65,13 +66,7 @@ function buildPassageModel_(row, ctx, data, idx) {
   const choices = isChoiceRow ? [] : collectFollowingChoices_(data, idx, ctx);
 
   let next = null;
-  if (!isChoiceRow && !choices.length) {
-    if (!isBlank_(jumpTo)) {
-      next = resolveJumpTarget_agnostic(row, ctx, jumpTo);
-    }
-  } else if (isChoiceRow) {
-    next = !isBlank_(jumpTo) ? resolveJumpTarget_agnostic(row, ctx, jumpTo) : null;
-  }
+  next = resolveJumpTargetAgnostic_(row, nextRow, ctx, jumpTo);
 
   return {
     character,
@@ -107,16 +102,28 @@ function collectFollowingChoices_(data, i, ctx) {
   return choices;
 }
 
-function resolveJumpTarget_agnostic(row, ctx, jumpTo) {
+function resolveJumpTargetAgnostic_(row, nextRow, ctx, jumpTo) {
   const currentQuest = readCell_(row, ctx.questIndex);
 
-  if (!jumpTo) return null;
-  const raw = String(jumpTo).trim();
+  if (nextRow && !isChoice(row[ctx.triggerIndex]) && isChoice(nextRow[ctx.triggerIndex])) {
+    return null;
+  }
 
-  const m = raw.match(/^(.+?)[#:](\d+)$/);
-  if (m) return { quest: m[1].trim(), id: m[2].trim() };
+  if (!jumpTo) {
+    if (!nextRow) return null;
+    const nextRowQuest = readCell_(nextRow, ctx.questIndex);
+    const nextRowId = readCell_(nextRow, ctx.idIndex);    
+    return { quest: nextRowQuest, id: nextRowId };
+  }
+  else{
+    const raw = String(jumpTo).trim();
 
-  return { quest: currentQuest, id: raw };
+    const match = raw.match(/(?<quest>[\d\w]*)(?:_)(?<id>\d.*)/);
+    if (match && match.length==3)
+      return { quest: match[1].trim(), id: match[2].trim() };
+    else
+      return { quest: currentQuest, id: raw };
+  }
 }
 
 function sortRowsById(rows, idIndex) {
