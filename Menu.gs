@@ -3,8 +3,9 @@ function onOpen() {
   ui.createMenu('Narrative')
     .addItem('Open Narrative Builder', 'openNarrativeBuilder')
     .addSeparator()
-    .addItem('Quick build: Generic JSON (all quests)', 'lounchGenericLayerExport')
-    .addItem('Quick build: Twine / Twee (all quests)', 'lounchTweeExport')
+    .addItem('Quick build: Generic JSON  (all quests)', 'lounchGenericLayerExport')
+    .addItem('Quick build: Twine / Twee  (all quests)', 'lounchTweeExport')
+    .addItem('Quick build: Mermaid graph (all quests)', 'lounchMermaidExport')
     .addToUi();
 }
 
@@ -76,16 +77,13 @@ function buildNarrative(options) {
 function runExportForTarget_(target) {
   switch (target) {
     case 'twee':
-      if (typeof exportDialoguesToTwee !== 'function') {
-        throw new Error('exportDialoguesToTwee() was not found in the project.');
-      }
       return exportDialoguesToTwee();
 
     case 'generic':
-      if (typeof exportDialoguesToGenericNarrativeModel !== 'function') {
-        throw new Error('exportDialoguesToGenericNarrativeModel() was not found in the project.');
-      }
       return exportDialoguesToGenericNarrativeModel();
+
+    case 'mermaid':
+      return exportDialoguesToMermaid();
 
     default:
       throw new Error('Unknown target: ' + target);
@@ -124,4 +122,8 @@ function lounchGenericLayerExport() {
   showBuilderSidebar_('generic', link);
 }
 
+function lounchTweeExport() {
+  const link = runExportForTarget_('mermaid');
+  showBuilderSidebar_('mermaid', link);
+}
 

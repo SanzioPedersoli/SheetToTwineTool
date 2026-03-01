@@ -32,7 +32,7 @@ function isBlank_(v) {
   return v === '' || v === null || v === undefined;
 }
 
-function saveTweeToDrive(output, fileName) {
+function saveToDrive(output, fileName) {
   const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   const file = folder.createFile(fileName, output, MimeType.PLAIN_TEXT);
   Logger.log('Created file: ' + file.getUrl());
