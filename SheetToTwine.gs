@@ -9,7 +9,7 @@ function exportDialoguesToTwee() {
   const storyModel = buildStoryModel(rows, colMap);
   const output = twineExporter(storyModel).join("\n");
 
-  const path = saveTweeToDrive(output, TITLE + '.twee');
+  const path = saveToDrive(output, TITLE + '.twee');
   return path;
 }
 

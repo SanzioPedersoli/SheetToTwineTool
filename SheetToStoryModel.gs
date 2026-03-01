@@ -8,7 +8,7 @@ function exportDialoguesToGenericNarrativeModel() {
 
   const output = buildStoryModel(rows, colMap);
 
-  const path = saveTweeToDrive(JSON.stringify(output, null, "  "), TITLE + '.json');
+  const path = saveToDrive(JSON.stringify(output, null, "  "), TITLE + '.json');
   return path;
 }
 

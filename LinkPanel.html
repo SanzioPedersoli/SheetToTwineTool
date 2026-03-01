@@ -1,11 +1,256 @@
 <!DOCTYPE html>
 <html>
-	<body style="font-family: Arial; padding: 10px;">
-		<h3>Builded Twine File:</h3>
-		<p>
-			<a href="<?= linkGenerated ?>" target="_blank">
-				Open file
-			</a>
-		</p>
-	</body>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <style>
+      body { padding: 12px 14px; }
+      h2 { margin: 0 0 8px 0; font-size: 13px; font-weight: 600; }
+      label { font-size: 12px; }
+      .section { margin-bottom: 14px; }
+      .row { display: flex; gap: 8px; align-items: center; }
+      .row > * { flex: 1; }
+      .row .button { flex: 0 0 auto; }
+      .quest-list {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 8px;
+        max-height: 180px;
+        overflow: auto;
+        background: #fff;
+      }
+      .quest-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+      .muted { color: #666; font-size: 12px; }
+      .tiny { font-size: 11px; }
+      input[type="text"][readonly] { background: #fafafa; }
+      .spinner {
+        width: 16px; height: 16px;
+        border: 2px solid rgba(0,0,0,.15);
+        border-top-color: rgba(0,0,0,.45);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .divider { height: 1px; background: #e0e0e0; margin: 10px 0; }
+      .btn-row { display:flex; justify-content:flex-end; gap:8px; align-items:center; }
+      .btn-row .action { min-width: 72px; }
+      .link { word-break: break-all; }
+    </style>
+  </head>
+  <body>
+
+    <div class="section block">
+      <h2>Build options</h2>
+
+      <div class="form-group">
+        <label for="targetSelect">Target</label>
+        <select id="targetSelect" class="width-100">
+          <option value="generic">Generic JSON</option>
+          <option value="twee">Twine / Twee</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="buildAllToggle" checked>
+          Build all quests
+        </label>
+      </div>
+
+      <div id="questSection" style="display:none;">
+        <div class="divider"></div>
+        <div class="row" style="margin-bottom:6px;">
+          <div class="muted" style="flex:1;">Quests</div>
+          <button class="button" id="selectAllBtn" type="button">All</button>
+          <button class="button" id="selectNoneBtn" type="button">None</button>
+        </div>
+        <div id="questList" class="quest-list">
+          <div class="muted">Loading quests…</div>
+        </div>
+        <div class="muted tiny" style="margin-top:6px;">
+          Only checked quests will be included in the build.
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="btn-row">
+        <span id="busySpinner" class="spinner" style="display:none;"></span>
+        <button class="action" id="buildBtn" type="button">Build</button>
+      </div>
+
+      <div id="status" class="muted" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="section block">
+      <h2>Output</h2>
+
+      <div id="outputEmpty" class="muted">No output yet.</div>
+
+      <div id="outputArea" style="display:none;">
+        <div class="link" style="margin:6px 0 10px 0;">
+          <a id="outputLink" href="" target="_blank" rel="noopener">Open generated file</a>
+        </div>
+
+        <div class="row" style="margin-bottom:6px;">
+          <input type="text" id="outputUrl" readonly aria-label="Generated link">
+          <button class="button" id="copyBtn" type="button">Copy</button>
+        </div>
+
+        <div id="copyStatus" class="muted tiny"></div>
+      </div>
+    </div>
+
+    <script>
+      const DEFAULT_TARGET = <?!= JSON.stringify(defaultTarget || 'twee') ?>;
+      const INITIAL_LINK = <?!= JSON.stringify(initialLink || '') ?>;
+
+      const el = (id) => document.getElementById(id);
+
+      function setBusy(isBusy, msg) {
+        el('busySpinner').style.display = isBusy ? 'inline-block' : 'none';
+        el('buildBtn').disabled = isBusy;
+        el('targetSelect').disabled = isBusy;
+        el('buildAllToggle').disabled = isBusy;
+        el('selectAllBtn').disabled = isBusy;
+        el('selectNoneBtn').disabled = isBusy;
+        if (msg != null) el('status').textContent = msg;
+      }
+
+      function showOutput(url) {
+        if (!url) return;
+        el('outputEmpty').style.display = 'none';
+        el('outputArea').style.display = 'block';
+        el('outputLink').href = url;
+        el('outputUrl').value = url;
+      }
+
+      function showError(err) {
+        const msg = (err && err.message) ? err.message : String(err || 'Unknown error');
+        el('status').textContent = 'Error: ' + msg;
+      }
+
+      function renderQuestList(quests) {
+        const list = el('questList');
+        list.innerHTML = '';
+        if (!quests || quests.length === 0) {
+          list.innerHTML = '<div class="muted">No quests found in the sheet.</div>';
+          return;
+        }
+
+        quests.forEach((q, i) => {
+          const id = 'q_' + i;
+          const wrap = document.createElement('div');
+          wrap.className = 'quest-item';
+          wrap.innerHTML = `
+            <input type="checkbox" id="${id}" class="questChk" checked>
+            <label for="${id}" style="margin:0;">${escapeHtml(q)}</label>
+          `;
+          wrap.dataset.quest = q;
+          list.appendChild(wrap);
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+      }
+
+      function getSelectedQuests() {
+        const rows = el('questList').querySelectorAll('.quest-item');
+        const selected = [];
+        rows.forEach(r => {
+          const chk = r.querySelector('input.questChk');
+          if (chk && chk.checked) selected.push(r.dataset.quest);
+        });
+        return selected;
+      }
+
+      function toggleAllQuests(checked) {
+        const chks = el('questList').querySelectorAll('input.questChk');
+        chks.forEach(c => c.checked = checked);
+      }
+
+      function refreshQuestVisibility() {
+        const show = !el('buildAllToggle').checked;
+        el('questSection').style.display = show ? 'block' : 'none';
+      }
+
+      function copyToClipboard(text) {
+        el('copyStatus').textContent = '';
+        if (!text) return;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text)
+            .then(() => el('copyStatus').textContent = 'Copied to clipboard.')
+            .catch(() => fallbackCopy(text));
+        }
+        return fallbackCopy(text);
+      }
+
+      function fallbackCopy(text) {
+        const input = el('outputUrl');
+        input.focus();
+        input.select();
+        try {
+          document.execCommand('copy');
+          el('copyStatus').textContent = 'Copied to clipboard.';
+        } catch (e) {
+          el('copyStatus').textContent = 'Copy failed — you can manually select and copy the URL.';
+        }
+      }
+
+      function build() {
+        const target = el('targetSelect').value;
+        const buildAll = el('buildAllToggle').checked;
+        const quests = buildAll ? [] : getSelectedQuests();
+
+        if (!buildAll && quests.length === 0) {
+          el('status').textContent = 'Select at least one quest (or enable “Build all quests”).';
+          return;
+        }
+
+        setBusy(true, 'Building…');
+        google.script.run
+          .withSuccessHandler((url) => {
+            showOutput(url);
+            setBusy(false, 'Done.');
+          })
+          .withFailureHandler((err) => {
+            setBusy(false);
+            showError(err);
+          })
+          .buildNarrative({ target, buildAll, quests });
+      }
+
+      function init() {
+        el('targetSelect').value = DEFAULT_TARGET || 'twee';
+
+        el('buildAllToggle').addEventListener('change', refreshQuestVisibility);
+        el('selectAllBtn').addEventListener('click', () => toggleAllQuests(true));
+        el('selectNoneBtn').addEventListener('click', () => toggleAllQuests(false));
+        el('buildBtn').addEventListener('click', build);
+        el('copyBtn').addEventListener('click', () => copyToClipboard(el('outputUrl').value));
+
+        google.script.run
+          .withSuccessHandler((quests) => renderQuestList(quests))
+          .withFailureHandler((err) => {
+            el('questList').innerHTML = '<div class="muted">Failed to load quests.</div>';
+            showError(err);
+          })
+          .getAvailableQuests();
+
+        if (INITIAL_LINK) showOutput(INITIAL_LINK);
+        refreshQuestVisibility();
+      }
+
+      document.addEventListener('DOMContentLoaded', init);
+    </script>
+  </body>
 </html>
+
